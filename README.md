@@ -6,18 +6,22 @@ A streamlined command-line tool for interacting with LLM APIs that handles multi
 
 1. Create config directory and copy a model config:
 ```bash
+cd ~
+git clone https://github.com/LoqLab/yllm.git
+cd yllm
 mkdir -p ~/.yllm
-cp models/sonnet3.6 ~/.yllm/sonnet3.6
+cp models/claude-3-6-sonnet ~/.yllm/claude-3-6-sonnet
+# Add "PATH=$PATH:~/yllm" to your "~/.bashrc" or "~/.zshrc" file
 ```
 
 2. Add your API key:
 ```bash
-nano ~/.yllm/sonnet3.6
+nano ~/.yllm/claude-3-6-sonnet
 ```
 
-3. Set as default model (optional):
+3. Set as default model:
 ```bash
-yllm --set-default sonnet3.6
+yllm --set-default claude-3-6-sonnet
 ```
 
 ## Basic Usage
