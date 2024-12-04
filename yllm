@@ -61,8 +61,14 @@ clear_default_model() {
 # Function to check if Playwright is available
 check_playwright() {
     if python3 -c "import playwright" &>/dev/null; then
+        if [[ $YLLM_DEBUG ]]; then
+            echo "Debug: Playwright is available" >&2
+        fi
         return 0
     else
+        if [[ $YLLM_DEBUG ]]; then
+            echo "Debug: Playwright is not available" >&2
+        fi
         return 1
     fi
 }
