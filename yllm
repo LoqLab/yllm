@@ -58,26 +58,6 @@ clear_default_model() {
     rm -f "$config_file"
 }
 
-# Function to check if a URL is a PDF by examining Content-Type
-check_pdf_url() {
-    local url="$1"
-    local content_type
-
-    # Try to fetch headers, redirect stderr to null to ignore curl errors
-    content_type=$(curl -sI "$url" 2>/dev/null | grep -i "Content-Type:" | awk '{print $2}')
-
-    # If curl failed or content_type is empty, assume it's not a PDF
-    if [[ -z "$content_type" ]] || [[ $? -ne 0 ]]; then
-        return 1
-    fi
-
-    # Check if the Content-Type is application/pdf
-    if [[ "$content_type" == "application/pdf" ]]; then
-        return 0
-    else
-        return 1
-    fi
-}
 
 # Function to check if Playwright is available
 check_playwright() {
@@ -244,16 +224,27 @@ while [[ $# -gt 0 ]]; do
         -u|--url)
             url="$2"
             temp_file=$(mktemp)
-            if check_pdf_url "$url"; then
-                # It's a PDF, download it directly
-                if ! curl -s -L "$url" -o "$temp_file"; then
-                    echo "Error downloading PDF from URL" >&2
-                    rm -f "$temp_file"
-                    exit 1
+            
+            # Try to download the file first
+            if curl -s -L "$url" -o "$temp_file"; then
+                # Check if it's a PDF using file command
+                if file -b --mime-type "$temp_file" | grep -q "application/pdf"; then
+                    URL_CONTENT="$(pdftotext "$temp_file" -)"
+                else
+                    # Not a PDF, try playwright
+                    if check_playwright; then
+                        if ! playwright pdf "$url" "$temp_file" &>/dev/null; then
+                            # If playwright fails, fall back to curl+lynx
+                            URL_CONTENT="$(curl -s "$url" | lynx -stdin -dump)"
+                        else
+                            URL_CONTENT="$(pdftotext "$temp_file" -)"
+                        fi
+                    else
+                        URL_CONTENT="$(curl -s "$url" | lynx -stdin -dump)"
+                    fi
                 fi
-                URL_CONTENT="$(pdftotext "$temp_file" -)"
             else
-                # Not a PDF or error occurred, try playwright
+                # Download failed, try playwright
                 if check_playwright; then
                     if ! playwright pdf "$url" "$temp_file" &>/dev/null; then
                         # If playwright fails, fall back to curl+lynx
