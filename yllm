@@ -226,7 +226,7 @@ while [[ $# -gt 0 ]]; do
             temp_file=$(mktemp)
             
             # Try to download the file first
-            if curl -s -L "$url" -o "$temp_file"; then
+            if curl -s -L -k "$url" -o "$temp_file"; then
                 # Check if it's a PDF using file command
                 if file -b --mime-type "$temp_file" | grep -q "application/pdf"; then
                     URL_CONTENT="$(pdftotext "$temp_file" -)"
@@ -235,7 +235,7 @@ while [[ $# -gt 0 ]]; do
                     if check_playwright; then
                         if ! playwright pdf "$url" "$temp_file" &>/dev/null; then
                             # If playwright fails, fall back to curl+lynx
-                            URL_CONTENT="$(curl -s "$url" | lynx -stdin -dump)"
+                            URL_CONTENT="$(curl -s -k "$url" | lynx -stdin -dump)"
                         else
                             URL_CONTENT="$(pdftotext "$temp_file" -)"
                         fi
