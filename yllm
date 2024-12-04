@@ -73,26 +73,6 @@ check_playwright() {
     fi
 }
 
-# Function to scrape URL with Playwright
-scrape_with_playwright() {
-    local url="$1"
-    python3 - << EOF
-from playwright.sync_api import sync_playwright
-import sys
-
-with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True)
-    page = browser.new_page()
-    try:
-        page.goto("$url")
-        page.wait_for_selector('body')
-        print(page.content())
-    except Exception as e:
-        print(f"Error: {str(e)}", file=sys.stderr)
-    finally:
-        browser.close()
-EOF
-}
 
 # Function to mask API key
 mask_api_key() {
@@ -242,24 +222,35 @@ while [[ $# -gt 0 ]]; do
             ;;
         -u|--url)
             url="$2"
+            temp_file=$(mktemp)
             if [[ "$url" =~ \.pdf$ ]]; then
-                # For PDF URLs, download to temp file and use pdftotext
-                temp_pdf=$(mktemp)
-                if curl -s -L "$url" -o "$temp_pdf"; then
-                    URL_CONTENT="$(pdftotext "$temp_pdf" -)"
-                    rm -f "$temp_pdf"
-                else
+                # For PDF URLs, directly download the PDF
+                if ! curl -s -L "$url" -o "$temp_file"; then
                     echo "Error downloading PDF from URL" >&2
+                    rm -f "$temp_file"
                     exit 1
                 fi
             else
-                # For non-PDF URLs, use playwright or regular scraping
+                # For non-PDF URLs, use playwright to generate PDF
                 if check_playwright; then
-                    URL_CONTENT="$(scrape_with_playwright "$2" | lynx -stdin -dump)"
+                    if ! playwright pdf "$url" "$temp_file" &>/dev/null; then
+                        echo "Error generating PDF from URL with Playwright" >&2
+                        rm -f "$temp_file"
+                        exit 1
+                    fi
                 else
+                    # Fallback to curl+lynx if playwright not available
                     URL_CONTENT="$(curl -s "$2" | lynx -stdin -dump)"
+                    rm -f "$temp_file"
+                    inputs+=("$URL_CONTENT")
+                    shift # past argument
+                    shift # past value
+                    continue
                 fi
             fi
+            # Convert PDF to text
+            URL_CONTENT="$(pdftotext "$temp_file" -)"
+            rm -f "$temp_file"
             inputs+=("$URL_CONTENT")
             shift # past argument
             shift # past value
