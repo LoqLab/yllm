@@ -58,6 +58,36 @@ clear_default_model() {
     rm -f "$config_file"
 }
 
+# Function to check if Playwright is available
+check_playwright() {
+    if python3 -c "import playwright" &>/dev/null; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Function to scrape URL with Playwright
+scrape_with_playwright() {
+    local url="$1"
+    python3 - << EOF
+from playwright.sync_api import sync_playwright
+import sys
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    page = browser.new_page()
+    try:
+        page.goto("$url")
+        page.wait_for_selector('body')
+        print(page.content())
+    except Exception as e:
+        print(f"Error: {str(e)}", file=sys.stderr)
+    finally:
+        browser.close()
+EOF
+}
+
 # Function to mask API key
 mask_api_key() {
     local key="$1"
@@ -205,7 +235,11 @@ while [[ $# -gt 0 ]]; do
             shift # past argument
             ;;
         -u|--url)
-            URL_CONTENT="$(curl -s "$2" | lynx -stdin -dump)"
+            if check_playwright; then
+                URL_CONTENT="$(scrape_with_playwright "$2" | lynx -stdin -dump)"
+            else
+                URL_CONTENT="$(curl -s "$2" | lynx -stdin -dump)"
+            fi
             inputs+=("$URL_CONTENT")
             shift # past argument
             shift # past value
