@@ -223,7 +223,7 @@ while [[ $# -gt 0 ]]; do
         -u|--url)
             url="$2"
             temp_file=$(mktemp)
-            if [[ "$url" =~ \.pdf$ ]]; then
+            if [[ "${url,,}" =~ \.(pdf)$ ]]; then
                 # For PDF URLs, directly download the PDF
                 if ! curl -s -L "$url" -o "$temp_file"; then
                     echo "Error downloading PDF from URL" >&2
