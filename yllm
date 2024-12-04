@@ -235,10 +235,24 @@ while [[ $# -gt 0 ]]; do
             shift # past argument
             ;;
         -u|--url)
-            if check_playwright; then
-                URL_CONTENT="$(scrape_with_playwright "$2" | lynx -stdin -dump)"
+            url="$2"
+            if [[ "$url" =~ \.pdf$ ]]; then
+                # For PDF URLs, download to temp file and use pdftotext
+                temp_pdf=$(mktemp)
+                if curl -s -L "$url" -o "$temp_pdf"; then
+                    URL_CONTENT="$(pdftotext "$temp_pdf" -)"
+                    rm -f "$temp_pdf"
+                else
+                    echo "Error downloading PDF from URL" >&2
+                    exit 1
+                fi
             else
-                URL_CONTENT="$(curl -s "$2" | lynx -stdin -dump)"
+                # For non-PDF URLs, use playwright or regular scraping
+                if check_playwright; then
+                    URL_CONTENT="$(scrape_with_playwright "$2" | lynx -stdin -dump)"
+                else
+                    URL_CONTENT="$(curl -s "$2" | lynx -stdin -dump)"
+                fi
             fi
             inputs+=("$URL_CONTENT")
             shift # past argument
