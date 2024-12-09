@@ -415,35 +415,69 @@ send_request() {
 
     else
     if [[ $YLLM_API_URL == *"cerebras.ai"* ]]; then
-        json_payload=$(printf '{
-            "messages": [
-                {
-                    "role": "user",
-                    "content": %s
-                }
-            ],
-            "model": "%s",
-            "stream": true,
-            "temperature": %.2f,
-            "max_completion_tokens": %d,
-            "seed": %d,
-            "top_p": %.2f
-        }' "$prompt" "$YLLM_MODEL" $YLLM_TEMPERATURE $YLLM_MAX_COMPLETION_TOKENS $YLLM_SEED $YLLM_TOP_P)
+        # Only include max_completion_tokens if not default (-1)
+        if [[ $YLLM_MAX_COMPLETION_TOKENS -eq -1 ]]; then
+            json_payload=$(printf '{
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": %s
+                    }
+                ],
+                "model": "%s",
+                "stream": true,
+                "temperature": %.2f,
+                "seed": %d,
+                "top_p": %.2f
+            }' "$prompt" "$YLLM_MODEL" $YLLM_TEMPERATURE $YLLM_SEED $YLLM_TOP_P)
+        else
+            json_payload=$(printf '{
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": %s
+                    }
+                ],
+                "model": "%s",
+                "stream": true,
+                "temperature": %.2f,
+                "max_completion_tokens": %d,
+                "seed": %d,
+                "top_p": %.2f
+            }' "$prompt" "$YLLM_MODEL" $YLLM_TEMPERATURE $YLLM_MAX_COMPLETION_TOKENS $YLLM_SEED $YLLM_TOP_P)
+        fi
     else
-        json_payload=$(printf '{
-            "messages": [
-                {
-                    "role": "user",
-                    "content": %s
-                }
-            ],
-            "model": "%s",
-            "stream": true,
-            "n": 1,
-            "temperature": %.2f,
-            "max_tokens": %d,
-            "top_p": %.2f
-        }' "$prompt" "$YLLM_MODEL" $YLLM_TEMPERATURE $YLLM_MAX_TOKENS $YLLM_TOP_P)
+        # Only include max_tokens if not default (4096)
+        if [[ $YLLM_MAX_TOKENS -eq 4096 ]]; then
+            json_payload=$(printf '{
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": %s
+                    }
+                ],
+                "model": "%s",
+                "stream": true,
+                "n": 1,
+                "temperature": %.2f,
+                "top_p": %.2f
+            }' "$prompt" "$YLLM_MODEL" $YLLM_TEMPERATURE $YLLM_TOP_P)
+        else
+            json_payload=$(printf '{
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": %s
+                    }
+                ],
+                "model": "%s",
+                "stream": true,
+                "n": 1,
+                "temperature": %.2f,
+                "max_tokens": %d,
+                "top_p": %.2f
+            }' "$prompt" "$YLLM_MODEL" $YLLM_TEMPERATURE $YLLM_MAX_TOKENS $YLLM_TOP_P)
+        fi
     fi
     fi
 
