@@ -3,7 +3,7 @@
 # Default values
 DEFAULT_MAX_TOKENS=4096
 DEFAULT_TEMPERATURE=0.7
-DEFAULT_TOP_P=0.7
+DEFAULT_TOP_P=""
 DEFAULT_SEED=0
 DEFAULT_MAX_COMPLETION_TOKENS=-1
 
@@ -414,6 +414,13 @@ send_request() {
         }' "$prompt" "$YLLM_MODEL" $YLLM_MAX_TOKENS $YLLM_TEMPERATURE)
 
     else
+    # Set top_p parameter if it's non-empty
+    if [[ -n "$YLLM_TOP_P" ]]; then
+        TOP_P_PARAM=$(printf ',\n    "top_p": %.2f' "$YLLM_TOP_P")
+    else
+        TOP_P_PARAM=""
+    fi
+
     if [[ $YLLM_API_URL == *"cerebras.ai"* ]]; then
         # Only include max_completion_tokens if not default (-1)
         if [[ $YLLM_MAX_COMPLETION_TOKENS -eq -1 ]]; then
@@ -427,9 +434,8 @@ send_request() {
                 "model": "%s",
                 "stream": true,
                 "temperature": %.2f,
-                "seed": %d,
-                "top_p": %.2f
-            }' "$prompt" "$YLLM_MODEL" $YLLM_TEMPERATURE $YLLM_SEED $YLLM_TOP_P)
+                "seed": %d%s
+            }' "$prompt" "$YLLM_MODEL" $YLLM_TEMPERATURE $YLLM_SEED "$TOP_P_PARAM")
         else
             json_payload=$(printf '{
                 "messages": [
@@ -442,9 +448,8 @@ send_request() {
                 "stream": true,
                 "temperature": %.2f,
                 "max_completion_tokens": %d,
-                "seed": %d,
-                "top_p": %.2f
-            }' "$prompt" "$YLLM_MODEL" $YLLM_TEMPERATURE $YLLM_MAX_COMPLETION_TOKENS $YLLM_SEED $YLLM_TOP_P)
+                "seed": %d%s
+            }' "$prompt" "$YLLM_MODEL" $YLLM_TEMPERATURE $YLLM_MAX_COMPLETION_TOKENS $YLLM_SEED "$TOP_P_PARAM")
         fi
     else
         # Only include max_tokens if not default (4096)
@@ -459,9 +464,8 @@ send_request() {
                 "model": "%s",
                 "stream": true,
                 "n": 1,
-                "temperature": %.2f,
-                "top_p": %.2f
-            }' "$prompt" "$YLLM_MODEL" $YLLM_TEMPERATURE $YLLM_TOP_P)
+                "temperature": %.2f%s
+            }' "$prompt" "$YLLM_MODEL" $YLLM_TEMPERATURE "$TOP_P_PARAM")
         else
             json_payload=$(printf '{
                 "messages": [
@@ -474,9 +478,8 @@ send_request() {
                 "stream": true,
                 "n": 1,
                 "temperature": %.2f,
-                "max_tokens": %d,
-                "top_p": %.2f
-            }' "$prompt" "$YLLM_MODEL" $YLLM_TEMPERATURE $YLLM_MAX_TOKENS $YLLM_TOP_P)
+                "max_tokens": %d%s
+            }' "$prompt" "$YLLM_MODEL" $YLLM_TEMPERATURE $YLLM_MAX_TOKENS "$TOP_P_PARAM")
         fi
     fi
     fi
